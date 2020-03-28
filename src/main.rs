@@ -25,9 +25,9 @@ async fn main() {
     /*let hello = warp::path!("hello" / String)
         .map(|name| format!("Hello, {}!", name));*/
 
-    let routes = index.or(get_tile!());
+    let routes = index.or(get_tile!()).or(post_tile!()).or(put_tile!()).or(delete_tile!());
     
     warp::serve(routes)
-        .run(([127, 0, 0, 1], 1987))
+        .run(([0, 0, 0, 0], 1987))
         .await;
 }

@@ -5,10 +5,11 @@ class NavMenu extends React.Component {
     constructor(props){
         super(props);
         this.state = {
-            isOpen: false
+            isOpen: false,
         }
 
         this.syncCallback = this.props.syncCallback;
+        this.toggleRunCallback = this.props.toggleRunCallback;
     }
 
     toggle(){
@@ -16,15 +17,22 @@ class NavMenu extends React.Component {
     }
 
     render() {
+        if(this.props.Running == true){
+            var running1 = "Running";
+            var running2 = "running";
+        }else{
+            var running1 = "Stopped";
+            var running2 = "stopped";
+        }
         return (
             <Navbar color="dark" dark expand="md">
-                <NavbarBrand>AlexBox</NavbarBrand>
+                <NavbarBrand><img className="image" src="infowars.png"/>AlexBox</NavbarBrand>
                 <NavbarToggler onClick={this.toggle}/>
                 <Collapse isOpen={true} navbar>
-                <NavbarText>Admin Console</NavbarText>
                 <Nav className="ml-auto" navbar>
                     <NavItem>
-                        <Button onClick={this.syncCallback} color="info">Sync</Button>
+                        <Button onClick={this.syncCallback} color="info">Save</Button>&ensp;
+                        <Button onClick={this.toggleRunCallback} color="secondary" disabled>Doesn't Work {/*running1*/ /*<span className={"circle "+running2}></span>*/}</Button>
                     </NavItem>
                 </Nav>
                 </Collapse>

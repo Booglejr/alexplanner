@@ -23,13 +23,25 @@ class Editor extends React.Component {
     }
 
     componentDidMount(){
-        //Attempt Syncing
-        
-        axios.get(`http://127.0.0.1:1987/tile`)
+        //Attempt fetch of contents.
+        const interval = setInterval(axios({
+                method: 'get',
+                url: '/tile',
+                config: { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' } } 
+            })
             .then(res => {
-                const gridItems = res.data;
-                this.setState({gridItems: gridItems, isSyncing: false});
-        })
+                var gridItems = res.data;
+                var normalizedGridItems = [];
+                for (var i =0; i<gridItems.length; i++){
+                    var item = gridItems[i];
+                    item.color = "default"
+                    item.modified = false;
+                    item.deleted = false;
+                    normalizedGridItems.push(item);
+                }
+                this.setState({gridItems: normalizedGridItems, isSyncing: false});
+                clearInterval(interval);
+        }), 2000);
     }
 
     handleGridClick(e){
@@ -40,14 +52,14 @@ class Editor extends React.Component {
 
         if((x/((rect.right-rect.left)/8)) >= 1 && (y/((rect.bottom-rect.top)/50)) >= 2){
             var item = {};
-            item.id = null
+            item.id = -1
             item.title = "No Title"
-            item.mpv = "MPV command"
+            item.mpv = "MPV Command"
             item.modified = true;
             item.day = Math.floor(x/((rect.right-rect.left)/8))-1
-            item.hour = Math.floor(y/((rect.bottom-rect.top)/50))/2-1
+            item.time = Math.floor(y/((rect.bottom-rect.top)/50))/2-1
             item.duration = .5
-            item.deleted = null
+            item.deleted = false
 
             var colors = ['default']
             var i  = Math.floor(Math.random() * 6);
@@ -61,12 +73,114 @@ class Editor extends React.Component {
 
     sync(){
         this.setState({isSyncing: true});
+        var elements_to_delete = [];
+        var elements_to_update = [];
+        var elements_to_create = [];
+        var gridItems = this.state.gridItems;
+        for(var i = 0;i<gridItems.length;i++){
+            if(gridItems[i].modified==true){
+                if(gridItems[i].id != -1 && gridItems[i].deleted == true){
+                    var object = new Object();
+                    object.id = gridItems[i].id.toString();
+                    elements_to_delete.push(object);
+                }else if(gridItems[i].id != -1 && gridItems[i].deleted != true){
+                    var object = new Object();
+                    object.id = gridItems[i].id.toString();
+                    object.title = gridItems[i].title.toString();
+                    object.mpv = gridItems[i].mpv.toString();
+                    object.day = gridItems[i].day.toString();
+                    if(gridItems[i].time*2 % 2==1){
+                        if(gridItems[i].time<10){
+                            object.time = "1970-01-01 0"+(gridItems[i].time-.5)+":30:00";
+                        }else{
+                            object.time = "1970-01-01 "+(gridItems[i].time-.5)+":30:00";
+                        }
+                    }else{
+                        if(gridItems[i].time<10){
+                            object.time = "1970-01-01 0"+(gridItems[i].time)+":00:00";
+                        }else{
+                            object.time = "1970-01-01 "+(gridItems[i].time)+":00:00";
+                        }
+                    }
+                    object.duration = gridItems[i].duration.toString();
+                    elements_to_update.push(object);
+                }else if(gridItems[i].id == -1){
+                    var object = new Object();
+                    object.title = gridItems[i].title.toString();
+                    object.mpv = gridItems[i].mpv.toString();
+                    object.day = gridItems[i].day.toString();
+                    if(gridItems[i].time*2 % 2==1){
+                        if(gridItems[i].time<10){
+                            object.time = "1970-01-01 0"+(gridItems[i].time-.5)+":30:00";
+                        }else{
+                            object.time = "1970-01-01 "+(gridItems[i].time-.5)+":30:00";
+                        }
+                    }else{
+                        if(gridItems[i].time<10){
+                            object.time = "1970-01-01 0"+(gridItems[i].time)+":00:00";
+                        }else{
+                            object.time = "1970-01-01 "+(gridItems[i].time)+":00:00";
+                        }
+                    }
+                    object.duration = gridItems[i].duration.toString();
+                    elements_to_create.push(object);
+                }
+            }
+        }
+        axios({
+            method: 'delete',
+            url: '/tile',
+            data: elements_to_delete,
+            config: { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' } }
+        }).then(response => {
+            var self1 = this;
+            axios({
+                method: 'put',
+                url: '/tile',
+                data: elements_to_update,
+                config: { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' } }
+            }).then(response => {
+                var self2 = self1;
+                axios({
+                    method: 'post',
+                    url: '/tile',
+                    data: elements_to_create,
+                    config: { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache'  } }
+                }).then(response => {
+                    var self3 = self2;
+                    const interval = setInterval(axios.get('/tile')
+                        .then(res => {
+                            var gridItems = res.data;
+                            var normalizedGridItems = [];
+                            for (var i =0; i<gridItems.length; i++){
+                                var item = gridItems[i];
+                                item.color = "default"
+                                item.modified = false;
+                                item.deleted = false;
+                                normalizedGridItems.push(item);
+                            }
+                            self3.setState({gridItems: normalizedGridItems, isSyncing: false, selectedTile: null});
+                            clearInterval(interval);
+                        }), 2000);
+                }).catch(function(error) {
+                    alert("Creating a thing has failed somehow.")
+                    console.log(error);
+                });
+            }).catch(function(error) {
+                alert("Updating a thing has failed somehow.")
+                console.log(error);
+            });
+        }).catch(function(error) {
+            alert("Deleting a thing has failed somehow.")
+            console.log(error);
+        });
     }
 
     handleTitle(e, index){
         e.preventDefault();
         var gridItems = this.state.gridItems;
         gridItems[index].title = e.target.value;
+        gridItems[index].modified = true;
         this.setState({gridItems: gridItems});
     }
 
@@ -74,6 +188,7 @@ class Editor extends React.Component {
         e.preventDefault();
         var gridItems = this.state.gridItems;
         gridItems[index].mpv = e.target.value;
+        gridItems[index].modified = true;
         this.setState({gridItems: gridItems});
     }
 
@@ -82,19 +197,20 @@ class Editor extends React.Component {
         var gridItems = this.state.gridItems;
         var new_duration = parseFloat(e.target.value);
 
-        if(e.target.value % .5 == 0 && e.target.value >= .5 && (gridItems[index].hour + new_duration) <= 24){
+        if(e.target.value % .5 == 0 && e.target.value >= .5 && (gridItems[index].time + new_duration) <= 24){
             var ok = true;
             for(var i = 0;i<gridItems.length;i++){
                 if(i!=index){
                     var tile = gridItems[index];
                     var other_tile = gridItems[i];
-                    if(other_tile.hour > tile.hour && other_tile.hour < (tile.hour + new_duration) && other_tile.day == tile.day){
+                    if(other_tile.time > tile.time && other_tile.time < (tile.time + new_duration) && other_tile.day == tile.day){
                         ok = false;
                     }
                 }
             }
             if(ok){
                 gridItems[index].duration = new_duration;
+                gridItems[index].modified = true;
                 this.setState({gridItems: gridItems});
             }
         }
@@ -104,7 +220,7 @@ class Editor extends React.Component {
         e.preventDefault();
         //If no ID simply remove it.
         var oldGridItems = this.state.gridItems;
-        if(oldGridItems[index].id==null){
+        if(oldGridItems[index].id==-1){
             var newGridItems = [];
             for(var i = 0;i<oldGridItems.length;i++){
                 if(i!=index){
@@ -153,8 +269,8 @@ class Editor extends React.Component {
                 <div className="time-table">
                     <div onClick={this.handleGridClick} className="grid">
                         {this.state.gridItems.map((value, index) => {
-                            var start = value.hour*2+3 //We subtracted an extra 1 to make it 0 in hours.
-                            var stop = value.hour*2+3 + value.duration*2
+                            var start = value.time*2+3 //We subtracted an extra 1 to make it 0 in times.
+                            var stop = value.time*2+3 + value.duration*2
                             var day = value.day+2;
                             var color = value.color;
                             var title = value.title;
@@ -198,21 +314,21 @@ class Config extends React.Component {
             var tile = this.props.gridItems[this.props.selectedTile];
             var time = "";
             
-            if(tile.hour % 1 == .5){
-                time+=Math.floor(tile.hour);
+            if(tile.time % 1 == .5){
+                time+=Math.floor(tile.time);
                 time+=":30"
             }else{
-                time+=Math.floor(tile.hour);
+                time+=Math.floor(tile.time);
                 time+=":00"
             }
 
             time+="-";
             
-            if((tile.hour+tile.duration) % 1 == .5){
-                time+=Math.floor(tile.hour+tile.duration);
+            if((tile.time+tile.duration) % 1 == .5){
+                time+=Math.floor(tile.time+tile.duration);
                 time+=":30"
             }else{
-                time+=Math.floor(tile.hour+tile.duration);
+                time+=Math.floor(tile.time+tile.duration);
                 time+=":00"
             }
 

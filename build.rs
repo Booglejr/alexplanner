@@ -52,12 +52,12 @@ fn main() {
 				.output()
 				.expect("failed to execute process");
 		Command::new("sh")
-				.args(&["-c", "rm -r", "static_files"])
+				.args(&["-c", "rm -r -f static_files"])
 				//.args(&["-c", "rm -r", &(out_dir.clone()+"\\..\\..\\..\\static_files")])
 				.output()
 				.expect("failed to execute process");
 		Command::new("sh")
-				.args(&["-c", "mv src/clientapp/build","static_files"]) 
+				.args(&["-c", "mv src/clientapp/build static_files"]) 
 				//.args(&["-c", "mv src/clientapp/build",&(out_dir.clone()+"/../../../static_files")]) 
 				.output()
 				.expect("failed to execute process");

@@ -96,8 +96,31 @@ td, th{
     padding:1em;
     background-color: white;
     width:100%;
+    border-radius: .2em;
 }
 
 form > .form-group.rightside{
     text-align:right;
+}
+
+.image{
+    height:1.5rem;
+    vertical-align: top;
+    margin-top:.15rem;
+}
+
+.circle{
+    width:12px;
+    height:12px;
+    border-radius: 10em;
+    border: 2px solid white;
+    display: inline-block;
+}
+
+.running{
+    background-color: green;
+}
+
+.stopped{
+    background-color: red;
 }
